@@ -25,6 +25,8 @@ Compiled data is published under a versioned URL namespace, currently `/data/v6/
 
 The Query page also accepts a finite category presentation. Objects are space-separated names; generators are lines such as `f: x -> y`; relations are equations of composable paths such as `f g = h` or `a a = id_x`. Paths are written in traversal order. The browser resolves the presentation to a finite multiplication table, then uses the build's label-independent lookup index and an exact isomorphism check to find its database entry. A presentation that does not resolve within the browser's path limit reports that limitation rather than returning a possible quotient.
 
+Each category page computes two posets from its multiplication table. Congruences are equivalence relations on parallel morphisms preserved by composition, ordered by refinement. Two-sided ideals are subsets of morphisms closed under composition on either side, ordered by inclusion; the empty ideal is included. Small posets have full Hasse diagrams. Larger ones have a navigable diagram of each selected element and its immediate neighbors, with rank counts for the whole poset.
+
 Install the pinned dependencies and make a production build:
 
 ```sh

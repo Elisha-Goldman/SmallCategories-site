@@ -8,6 +8,8 @@ import {
 } from '../data.js'
 import { escapeHtml, iconText, setTitle } from '../ui.js'
 import { mountCategoryVisualization } from '../visualization.js'
+import { congruencePoset, idealPoset } from '../posets.js'
+import { mountPoset } from '../poset-view.js'
 import categoryTemplate from './category.html'
 
 function renderMatrix(table, morphisms) {
@@ -71,6 +73,22 @@ export async function renderCategoryPage({ app, morphisms, objects, index, isCur
     : '<p>The empty category has no quiver.</p>'
   app.querySelector('[data-category-table]').innerHTML = `${renderMatrix(table, morphisms)}${morphisms > 0 ? '<p class="help">“/” indicates an undefined composition.</p>' : ''}`
   app.querySelector('[data-category-facts]').innerHTML = renderCategoryFacts(propositions, mask)
+
+  for (const [selector, calculate, kind] of [
+    ['[data-category-congruences]', () => congruencePoset(table, objects), 'congruence'],
+    ['[data-category-ideals]', () => idealPoset(table), 'ideal'],
+  ]) {
+    setTimeout(() => {
+      if (!isCurrent()) return
+      const target = app.querySelector(selector)
+      try {
+        const poset = calculate()
+        if (isCurrent()) mountPoset(target, poset, { kind, morphisms })
+      } catch (error) {
+        if (isCurrent()) target.innerHTML = `<div class="notification is-danger is-light">${escapeHtml(error.message || error)}</div>`
+      }
+    }, 0)
+  }
 
   return {
     found: true,

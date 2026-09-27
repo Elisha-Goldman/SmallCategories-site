@@ -163,6 +163,20 @@ fieldset {
 .viz-nodes circle { fill: var(--smallcats-blue); stroke: white; stroke-width: 1.5; }
 .viz-nodes text { fill: white; text-anchor: middle; pointer-events: none; font-size: 13px; font-weight: 600; }
 
+.poset-scroll { max-height: 42rem; overflow: auto; border: 1px solid var(--smallcats-border); border-radius: 4px; background: white; }
+.poset-scroll svg { display: block; margin: auto; }
+.poset-edges line { stroke: #b5b5b5; stroke-width: 1.5; }
+.poset-node { cursor: pointer; }
+.poset-node ellipse { fill: white; stroke: var(--smallcats-blue); stroke-width: 1.5; }
+.poset-node text { fill: #363636; font-size: 10px; font-weight: 600; text-anchor: middle; pointer-events: none; }
+.poset-node:hover ellipse, .poset-node:focus ellipse { stroke: #363636; stroke-width: 2.5; }
+.poset-node:focus { outline: none; }
+.poset-node.is-selected ellipse { fill: var(--smallcats-blue); }
+.poset-node.is-selected text { fill: white; }
+.poset-ranks { line-height: 1.7; }
+.poset-jumps { display: flex; gap: 0.5rem; margin: 0.5rem 0; }
+.poset-detail { margin-top: 0.6rem; padding: 0.65rem 0.75rem; background: #f5f5f5; border-radius: 4px; overflow-wrap: anywhere; }
+
 .site-footer { padding: 2rem 1.5rem; text-align: center; }
 
 @media (max-width: 768px) {
