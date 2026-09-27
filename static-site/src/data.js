@@ -2,9 +2,11 @@ let manifestPromise
 let propositionsPromise
 const metadataPromises = new Map()
 const bitmapPromises = new Map()
+const lookupPromises = new Map()
+const shardPromises = new Map()
 
 function dataUrl(path) {
-  return new URL(`/data/v5/${path}`, window.location.origin).toString()
+  return new URL(`/data/v6/${path}`, window.location.origin).toString()
 }
 
 async function fetchJson(path) {
@@ -92,8 +94,31 @@ export function ordinalToCategory(manifest, ordinal) {
 /// together in the same shard so a category page makes a single request.
 export async function loadCategory(cell, index) {
   const shardIndex = Math.floor(index / cell.shardSize)
-  const shard = await fetchJson(`categories/${cell.morphisms}-${cell.objects}-${shardIndex}.json`)
+  const key = `${cell.morphisms}-${cell.objects}-${shardIndex}`
+  if (!shardPromises.has(key)) shardPromises.set(key, fetchJson(`categories/${key}.json`))
+  const shard = await shardPromises.get(key)
   const table = shard.tables[index - shard.start]
   if (!table) throw new Error(`Category index ${index} is missing from its data shard`)
   return { table, mask: shard.masks[index - shard.start] }
+}
+
+export async function lookupCandidates(cell, signature) {
+  const key = `${cell.morphisms}-${cell.objects}`
+  if (!lookupPromises.has(key)) lookupPromises.set(key, fetchBinary(`lookup/${key}.bin`))
+  const view = new DataView(await lookupPromises.get(key))
+  if (view.byteLength !== cell.count * 8) throw new Error(`The lookup index for ${key} has the wrong length`)
+  const count = view.byteLength / 8
+  let low = 0
+  let high = count
+  while (low < high) {
+    const middle = (low + high) >> 1
+    if (view.getUint32(middle * 8, true) < signature) low = middle + 1
+    else high = middle
+  }
+  const indexes = []
+  while (low < count && view.getUint32(low * 8, true) === signature) {
+    indexes.push(view.getUint32(low * 8 + 4, true))
+    low += 1
+  }
+  return indexes
 }

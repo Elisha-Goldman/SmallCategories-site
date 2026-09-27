@@ -19,9 +19,11 @@ The production build combines two inputs:
 - the adjacent [SmallCategories](https://github.com/diracdeltafunk/SmallCategories) checkout's `database/` directory contains the canonical multiplication tables;
 - this repository's `../website-data/` directory contains preserved public names, descriptions, proposition definitions, and proposition values.
 
-The compiler joins metadata to canonical tables by SHA-256 fingerprint and validates the snapshot's category, proposition, fact, and table counts. Public routes use `SmallCat(n,k,i)` coordinates and proposition names; no provider-specific identifiers or credentials are compiled into the site.
+The compiler reads the canonical tables and their proposition masks, and adds the names and descriptions in `website-data` by `SmallCat(n,k,i)` coordinates. Public routes use those coordinates and proposition names; no provider-specific identifiers or credentials are compiled into the site.
 
-Compiled data is published under a versioned URL namespace, currently `/data/v4/`. Bump that namespace whenever the database contents, metadata, facts, or compiled data schema change; otherwise a browser may combine cached files from different releases.
+Compiled data is published under a versioned URL namespace, currently `/data/v6/`. Bump that namespace whenever the database contents, metadata, facts, or compiled data schema change; otherwise a browser may combine cached files from different releases.
+
+The Query page also accepts a finite category presentation. Objects are space-separated names; generators are lines such as `f: x -> y`; relations are equations of composable paths such as `f g = h` or `a a = id_x`. Paths are written in traversal order. The browser resolves the presentation to a finite multiplication table, then uses the build's label-independent lookup index and an exact isomorphism check to find its database entry. A presentation that does not resolve within the browser's path limit reports that limitation rather than returning a possible quotient.
 
 Install the pinned dependencies and make a production build:
 

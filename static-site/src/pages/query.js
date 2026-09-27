@@ -6,7 +6,11 @@ import {
   bitmapHas,
   getManifest,
   getPropositions,
+  findCell,
+  loadCategory,
+  lookupCandidates,
 } from '../data.js'
+import { completePresentation, isomorphicTables, parsePresentation, tableSignature } from '../presentation.js'
 import { escapeHtml, iconText, numberFormat, setTitle } from '../ui.js'
 import queryTemplate from './query.html'
 
@@ -103,6 +107,46 @@ export async function renderQueryPage({ app, isCurrent, onError }) {
       await renderQueryResults(app, manifest, propositions, bounds, trueProps, falseProps, isLatest)
     } catch (error) {
       if (isLatest()) onError(error)
+    }
+  })
+
+  let presentationGeneration = 0
+  app.querySelector('#presentation-form').addEventListener('submit', async event => {
+    event.preventDefault()
+    const submission = ++presentationGeneration
+    const isLatest = () => isCurrent() && submission === presentationGeneration
+    const results = app.querySelector('#presentation-results')
+    const form = new FormData(event.currentTarget)
+    results.innerHTML = '<p class="loading">Resolving presentation…</p>'
+    // Yield before a potentially substantial finite completion.
+    await new Promise(resolve => setTimeout(resolve, 0))
+    if (!isLatest()) return
+    try {
+      const presentation = parsePresentation({
+        objects: form.get('objects'),
+        generators: form.get('generators'),
+        relations: form.get('relations'),
+      })
+      const category = completePresentation(presentation)
+      const cell = findCell(manifest, category.morphisms, category.objects)
+      if (!cell) {
+        results.innerHTML = `<div class="box">The presentation has ${category.morphisms} morphisms and ${category.objects} objects. This size is not in the database.</div>`
+        return
+      }
+      results.innerHTML = '<p class="loading">Searching the database…</p>'
+      const candidates = await lookupCandidates(cell, tableSignature(category.table, category.objects))
+      for (const index of candidates) {
+        const stored = await loadCategory(cell, index)
+        if (!isLatest()) return
+        if (!isomorphicTables(category.table, stored.table, category.objects)) continue
+        const metadata = await getCategoryMetadata(cell, index)
+        if (!isLatest()) return
+        results.innerHTML = `<div class="box"><p>Found <a href="${categoryHref(cell.morphisms, cell.objects, index)}" data-link>${categoryLabel(cell.morphisms, cell.objects, index)}</a>${metadata?.friendlyName ? ` — ${escapeHtml(metadata.friendlyName)}` : ''}.</p></div>`
+        return
+      }
+      if (isLatest()) results.innerHTML = `<div class="box">The presentation has ${category.morphisms} morphisms and ${category.objects} objects, but no matching category was found in this build.</div>`
+    } catch (error) {
+      if (isLatest()) results.innerHTML = `<div class="notification is-danger is-light">${escapeHtml(error.message || error)}</div>`
     }
   })
 }

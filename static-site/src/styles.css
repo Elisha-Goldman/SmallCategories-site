@@ -59,7 +59,7 @@ main { flex: 1; }
 .field { display: grid; gap: 0.35rem; }
 .field label, fieldset legend { font-weight: 600; }
 
-input[type="number"], select {
+input[type="number"], input[type="text"], textarea, select {
   width: 100%;
   min-height: 2.5rem;
   padding: 0.45rem 0.65rem;
@@ -70,7 +70,10 @@ input[type="number"], select {
   font: inherit;
 }
 
-input:focus, select:focus {
+textarea { resize: vertical; }
+#presentation-form .field { margin-bottom: 1rem; }
+
+input:focus, textarea:focus, select:focus {
   border-color: #485fc7;
   box-shadow: 0 0 0 0.125em rgba(72, 95, 199, 0.25);
   outline: none;

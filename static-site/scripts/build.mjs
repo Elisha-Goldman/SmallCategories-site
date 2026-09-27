@@ -15,6 +15,7 @@ import { createInterface } from 'node:readline'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build as bundle } from 'esbuild'
+import { tableSignature } from '../src/presentation.js'
 
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const SITE_DIR = resolve(SCRIPT_DIR, '..')
@@ -25,7 +26,7 @@ const TEMP_DIR = resolve(SITE_DIR, '.dist-tmp')
 const PUBLIC_FILES = ['.nojekyll', '_headers', 'favicon.svg', 'index.html']
 const SHARD_SIZE = 2048
 const PROPOSITION_BITS = 18
-const DATA_VERSION = 'v5'
+const DATA_VERSION = 'v6'
 
 function parseArgs(argv) {
   const result = { databaseDir: DEFAULT_DATABASE_DIR, websiteDataDir: null }
@@ -115,6 +116,7 @@ async function compileCell(databaseDir, outputDir, filename, morphisms, objects,
   let shardMasks = []
   const bitmaps = Array.from({ length: PROPOSITION_BITS }, () => [])
   const trueCounts = new Array(PROPOSITION_BITS).fill(0)
+  const lookup = []
 
   for await (const line of input) {
     if (!line.trim()) continue
@@ -127,6 +129,7 @@ async function compileCell(databaseDir, outputDir, filename, morphisms, objects,
     if (mask === undefined) {
       throw new Error(`${propositionsPath} has fewer rows than ${filename}`)
     }
+    lookup.push([tableSignature(table, objects), count])
     for (let bit = 0; bit < PROPOSITION_BITS; bit += 1) {
       const set = (mask >> bit) & 1
       bitmaps[bit].push(set)
@@ -155,6 +158,18 @@ async function compileCell(databaseDir, outputDir, filename, morphisms, objects,
   if (masks.length !== count) {
     throw new Error(`${propositionsPath} has ${masks.length} rows but ${filename} has ${count}`)
   }
+
+  // A small label-independent index lets presentation lookup fetch only the
+  // candidate shards. The browser still checks exact isomorphism afterward.
+  lookup.sort((a, b) => a[0] - b[0] || a[1] - b[1])
+  const lookupBytes = Buffer.allocUnsafe(lookup.length * 8)
+  lookup.forEach(([signature, index], position) => {
+    lookupBytes.writeUInt32LE(signature, position * 8)
+    lookupBytes.writeUInt32LE(index, position * 8 + 4)
+  })
+  const lookupPath = join(outputDir, 'data', DATA_VERSION, 'lookup', `${morphisms}-${objects}.bin`)
+  await mkdir(dirname(lookupPath), { recursive: true })
+  await writeFile(lookupPath, lookupBytes)
 
   // A proposition that is true of every category in the cell, or of none, is
   // already answered by its count -- only the mixed ones need a bitmap.

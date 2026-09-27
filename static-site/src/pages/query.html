@@ -31,3 +31,25 @@
   </form>
   <div id="query-results"></div>
 </section>
+
+<section class="section container">
+  <h2>Find a category from generators and relations</h2>
+  <p class="block">Write each generator as <code>f: x -&gt; y</code>. A path such as <code>f g</code> means first <code>f</code>, then <code>g</code>. Write an identity as <code>id_x</code>. The search finds the category presented by these relations when it can resolve to a finite table.</p>
+  <form class="box" id="presentation-form">
+    <div class="field">
+      <label for="presentation-objects">Objects (separated by spaces)</label>
+      <input id="presentation-objects" name="objects" type="text" value="x" spellcheck="false" autocomplete="off">
+    </div>
+    <div class="field">
+      <label for="presentation-generators">Generators (one per line)</label>
+      <textarea id="presentation-generators" name="generators" rows="3" spellcheck="false">a: x -&gt; x</textarea>
+    </div>
+    <div class="field">
+      <label for="presentation-relations">Relations (one per line)</label>
+      <textarea id="presentation-relations" name="relations" rows="3" spellcheck="false">a a = a</textarea>
+    </div>
+    <p class="help block">This example presents a two-morphism category. Leave relations empty for a free category, generators empty for a discrete category, or all fields empty for the empty category.</p>
+    <button class="button is-primary" type="submit">Find category</button>
+  </form>
+  <div id="presentation-results" role="status" aria-live="polite"></div>
+</section>

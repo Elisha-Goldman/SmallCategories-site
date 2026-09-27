@@ -5,12 +5,13 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { promisify } from 'node:util'
 import { fileURLToPath } from 'node:url'
+import { tableSignature } from '../src/presentation.js'
 
 const execFileAsync = promisify(execFile)
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const SITE_DIR = resolve(SCRIPT_DIR, '..')
 const DIST_DIR = join(SITE_DIR, 'dist')
-const DATA_VERSION = 'v5'
+const DATA_VERSION = 'v6'
 const DATA_DIR = join(DIST_DIR, 'data', DATA_VERSION)
 
 function assert(condition, message) {
@@ -68,6 +69,12 @@ try {
   // A category's propositions travel in its own shard.
   const shard = JSON.parse(await readFile(join(DATA_DIR, 'categories', '2-1-0.json'), 'utf8'))
   assert(shard.masks.join() === '0,2', 'shard masks were not compiled')
+  const lookup = await readFile(join(DATA_DIR, 'lookup', '2-1.bin'))
+  assert(lookup.length === 16, 'lookup should contain two category entries')
+  const view = new DataView(lookup.buffer, lookup.byteOffset, lookup.byteLength)
+  const entries = [0, 1].map(index => [view.getUint32(index * 8, true), view.getUint32(index * 8 + 4, true)])
+  assert(entries.some(([signature, index]) => signature === tableSignature(shard.tables[0], 1) && index === 0), 'first category is missing from lookup')
+  assert(entries.some(([signature, index]) => signature === tableSignature(shard.tables[1], 1) && index === 1), 'second category is missing from lookup')
 
   // Constant propositions are answered by the manifest; only mixed ones get a
   // bitmap, and its bits must match the masks.
