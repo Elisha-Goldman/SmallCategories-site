@@ -5,6 +5,18 @@ function resolve(objects, generators = '', relations = '') {
   return completePresentation(parsePresentation({ objects, generators, relations }))
 }
 
+function assertAssociative({ table, morphisms }) {
+  for (let first = 0; first < morphisms; first += 1) {
+    for (let second = 0; second < morphisms; second += 1) {
+      for (let third = 0; third < morphisms; third += 1) {
+        const left = table[first][second] < morphisms ? table[table[first][second]][third] : morphisms
+        const right = table[second][third] < morphisms ? table[first][table[second][third]] : morphisms
+        assert.equal(left, right)
+      }
+    }
+  }
+}
+
 assert.deepEqual(resolve('x'), { objects: 1, morphisms: 1, table: [[0]] })
 assert.deepEqual(resolve(''), { objects: 0, morphisms: 0, table: [] })
 assert.equal(resolve('x y').morphisms, 2)
@@ -27,12 +39,41 @@ const triangle = resolve('x y z', 'f: x -> y\ng: y -> z\nh: x -> z', 'f g = h')
 assert.equal(triangle.morphisms, 6)
 assert.equal(triangle.table[5][3], 4)
 
+const twoObjectGroupoid = resolve('x y', 'f: x -> y\ng: y -> x',
+  'f g = id_x\ng f = id_y')
+assert.equal(twoObjectGroupoid.morphisms, 4)
+assertAssociative(twoObjectGroupoid)
+
 const idempotent = resolve('x', 'a: x -> x', 'a a = a')
 assert.deepEqual(idempotent.table, [[0, 1], [1, 1]])
 const involution = resolve('x', 'a: x -> x', 'a a = id_x')
 assert.deepEqual(involution.table, [[0, 1], [1, 0]])
 assert.equal(isomorphicTables(idempotent.table, involution.table, 1), false)
 assert.equal(resolve('x', 'a: x -> x', 'a a a = id_x').morphisms, 3)
+
+// Paths are in traversal order. These relations present D3, the nonabelian
+// dihedral group of order six, even though one relation lengthens a word.
+const dihedral = resolve('x', 'r: x -> x\ns: x -> x',
+  'r r r = id_x\ns s = id_x\ns r = r r s')
+assert.equal(dihedral.morphisms, 6)
+assertAssociative(dihedral)
+const product = (left, right) => dihedral.table[left][right]
+const r = 1
+const s = 2
+assert.equal(product(product(r, r), r), 0)
+assert.equal(product(s, s), 0)
+assert.equal(product(r, s), product(s, product(r, r)))
+assert.notEqual(product(r, s), product(s, r))
+for (let element = 0; element < dihedral.morphisms; element += 1) {
+  assert.ok(dihedral.table[element].some((value, inverse) =>
+    value === 0 && dihedral.table[inverse][element] === 0))
+}
+assert.equal(resolve('x', 'r: x -> x\ns: x -> x',
+  'r r r = id_x\ns s = id_x\ns r s = r r').morphisms, 6)
+const squareSymmetries = resolve('x', 'r: x -> x\ns: x -> x',
+  'r r r r = id_x\ns s = id_x\ns r = r r r s')
+assert.equal(squareSymmetries.morphisms, 8)
+assertAssociative(squareSymmetries)
 
 const semilattice = resolve('x', 'a: x -> x\nb: x -> x', 'a a = a\nb b = b\na b = b a')
 assert.equal(semilattice.morphisms, 4)

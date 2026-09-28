@@ -1,3 +1,5 @@
+import { completeFinitePresentation } from './presentation-completion.js'
+
 // Paths are written in traversal order: "f g" means first f, then g.
 const identifier = /^[A-Za-z][A-Za-z0-9_]*$/
 
@@ -61,117 +63,8 @@ export function parsePresentation({ objects: objectText, generators: generatorTe
   return { objects, generators, relations }
 }
 
-function pathKey(source, word) {
-  return word.length ? word.join(',') : `@${source}`
-}
-
-function enumeratePaths(presentation, maxLength, maxPaths) {
-  const paths = presentation.objects.map((_, source) => ({ word: [], source, target: source, boundaries: [source] }))
-  const byKey = new Map(paths.map((path, index) => [pathKey(path.source, path.word), index]))
-  for (let index = 0; index < paths.length; index += 1) {
-    const path = paths[index]
-    if (path.word.length === maxLength) continue
-    for (let generator = 0; generator < presentation.generators.length; generator += 1) {
-      const edge = presentation.generators[generator]
-      if (edge.source !== path.target) continue
-      const word = [...path.word, generator]
-      const next = { word, source: path.source, target: edge.target, boundaries: [...path.boundaries, edge.target] }
-      byKey.set(pathKey(next.source, word), paths.length)
-      paths.push(next)
-      if (paths.length > maxPaths) fail(`This presentation needs more than ${maxPaths} paths to resolve. Try a shorter presentation or add relations.`)
-    }
-  }
-  return { paths, byKey }
-}
-
-function equivalentPaths(presentation, paths, byKey) {
-  const parent = paths.map((_, index) => index)
-  const find = index => {
-    while (parent[index] !== index) {
-      parent[index] = parent[parent[index]]
-      index = parent[index]
-    }
-    return index
-  }
-  const join = (left, right) => { parent[find(left)] = find(right) }
-  for (const [index, path] of paths.entries()) {
-    for (const relation of presentation.relations) {
-      for (const [from, to] of [[relation.left, relation.right], [relation.right, relation.left]]) {
-        for (let position = 0; position <= path.word.length - from.word.length; position += 1) {
-          if (path.boundaries[position] !== from.source || path.boundaries[position + from.word.length] !== from.target) continue
-          if (!from.word.every((generator, offset) => generator === path.word[position + offset])) continue
-          const replacement = [...path.word.slice(0, position), ...to.word, ...path.word.slice(position + from.word.length)]
-          const other = byKey.get(pathKey(path.source, replacement))
-          if (other !== undefined) join(index, other)
-        }
-      }
-    }
-  }
-  return find
-}
-
-// The search stops only when every path of length L+1 is provably equal to a
-// shorter path. Then induction reduces *every* longer path, so the result is
-// the presented category itself rather than a finite quotient of it.
-export function completePresentation(presentation, { maxPaths = 12000, maxLength = 16 } = {}) {
-  const minimum = Math.max(0, ...presentation.relations.flatMap(relation =>
-    [relation.left.word.length - 1, relation.right.word.length - 1]))
-  for (let length = minimum; length <= maxLength; length += 1) {
-    const { paths, byKey } = enumeratePaths(presentation, length + 1, maxPaths)
-    const find = equivalentPaths(presentation, paths, byKey)
-    const representatives = new Map()
-    for (let index = 0; index < paths.length; index += 1) {
-      if (paths[index].word.length <= length && !representatives.has(find(index))) {
-        representatives.set(find(index), index)
-      }
-    }
-    if (paths.some((path, index) => path.word.length === length + 1 && !representatives.has(find(index)))) continue
-    // A bounded equality is not yet a congruence if appending a generator to
-    // two equal short paths separates them. Both sides must be stable.
-    const transitions = new Map()
-    let congruent = true
-    for (let index = 0; index < paths.length && congruent; index += 1) {
-      const path = paths[index]
-      if (path.word.length > length) continue
-      for (let generator = 0; generator < presentation.generators.length; generator += 1) {
-        const edge = presentation.generators[generator]
-        for (const [side, applicable, word, source] of [
-          ['right', edge.source === path.target, [...path.word, generator], path.source],
-          ['left', edge.target === path.source, [generator, ...path.word], edge.source],
-        ]) {
-          if (!applicable) continue
-          const result = find(byKey.get(pathKey(source, word)))
-          const key = `${find(index)}:${generator}:${side}`
-          if (transitions.has(key) && transitions.get(key) !== result) {
-            congruent = false
-            break
-          }
-          transitions.set(key, result)
-        }
-        if (!congruent) break
-      }
-    }
-    if (!congruent) continue
-
-    const identityRoots = presentation.objects.map((_, object) => find(byKey.get(pathKey(object, []))))
-    const roots = [...identityRoots, ...[...representatives.keys()].filter(root => !identityRoots.includes(root))]
-    const morphismOfRoot = new Map(roots.map((root, index) => [root, index]))
-    const transition = (morphism, generator) => {
-      const representative = paths[representatives.get(roots[morphism])]
-      const next = byKey.get(pathKey(representative.source, [...representative.word, generator]))
-      if (next === undefined) fail('Could not compose paths in the presentation.')
-      return morphismOfRoot.get(find(next))
-    }
-    const morphisms = roots.map(root => paths[representatives.get(root)])
-    const count = roots.length
-    const table = Array.from({ length: count }, (_, row) =>
-      Array.from({ length: count }, (_, col) => {
-        if (morphisms[col].target !== morphisms[row].source) return count
-        return morphisms[row].word.reduce(transition, col)
-      }))
-    return { objects: presentation.objects.length, morphisms: count, table }
-  }
-  fail(`This presentation did not resolve within path length ${maxLength}. It may describe an infinite category.`)
+export function completePresentation(presentation, options) {
+  return completeFinitePresentation(presentation, options)
 }
 
 function endpoints(table, objects) {
