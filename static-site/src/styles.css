@@ -162,6 +162,11 @@ fieldset {
 .viz-nodes:active { cursor: grabbing; }
 .viz-nodes circle { fill: var(--smallcats-blue); stroke: white; stroke-width: 1.5; }
 .viz-nodes text { fill: white; text-anchor: middle; pointer-events: none; font-size: 13px; font-weight: 600; }
+.viz-highlight { margin-top: 0.75rem; font-size: 0.9rem; }
+.viz-highlight .viz-toolbar { margin-bottom: 0.4rem; }
+.viz-legend { display: flex; flex-wrap: wrap; gap: 0.35rem 0.9rem; }
+.viz-legend-item { display: inline-flex; align-items: center; gap: 0.35rem; }
+.viz-swatch { display: inline-block; width: 0.8rem; height: 0.8rem; border-radius: 2px; flex: none; }
 
 .poset-scroll { max-height: 42rem; overflow: auto; border: 1px solid var(--smallcats-border); border-radius: 4px; background: white; }
 .poset-scroll svg { display: block; margin: auto; }

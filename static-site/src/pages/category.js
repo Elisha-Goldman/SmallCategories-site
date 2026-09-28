@@ -69,10 +69,15 @@ export async function renderCategoryPage({ app, morphisms, objects, index, isCur
     ? `<div class="box viz-box">
         <div class="viz-toolbar"><span class="help">Drag the objects to rearrange the quiver.</span><button class="button is-small is-light" type="button" data-reset-viz>${iconText('rotate-left', 'Reset layout')}</button></div>
         <div class="viz" id="category-viz"></div>
+        <div class="viz-highlight" data-viz-highlight hidden>
+          <div class="viz-toolbar"><span data-viz-highlight-status role="status" aria-live="polite"></span><button class="button is-small is-light" type="button" data-clear-highlight>Clear highlight</button></div>
+          <div class="viz-legend" data-viz-legend></div>
+        </div>
       </div><p class="help">Morphisms 0 through ${objects - 1} are identities, shown as objects.</p>`
     : '<p>The empty category has no quiver.</p>'
   app.querySelector('[data-category-table]').innerHTML = `${renderMatrix(table, morphisms)}${morphisms > 0 ? '<p class="help">“/” indicates an undefined composition.</p>' : ''}`
   app.querySelector('[data-category-facts]').innerHTML = renderCategoryFacts(propositions, mask)
+  const categoryViewer = mountCategoryVisualization(app.querySelector('#category-viz'), table, objects, morphisms)
 
   for (const [selector, calculate, kind] of [
     ['[data-category-congruences]', () => congruencePoset(table, objects), 'congruence'],
@@ -83,7 +88,10 @@ export async function renderCategoryPage({ app, morphisms, objects, index, isCur
       const target = app.querySelector(selector)
       try {
         const poset = calculate()
-        if (isCurrent()) mountPoset(target, poset, { kind, morphisms })
+        if (isCurrent()) mountPoset(target, poset, {
+          kind, morphisms,
+          onSelect: selection => categoryViewer.highlight(selection),
+        })
       } catch (error) {
         if (isCurrent()) target.innerHTML = `<div class="notification is-danger is-light">${escapeHtml(error.message || error)}</div>`
       }
@@ -92,6 +100,6 @@ export async function renderCategoryPage({ app, morphisms, objects, index, isCur
 
   return {
     found: true,
-    cleanup: mountCategoryVisualization(app.querySelector('#category-viz'), table, objects, morphisms),
+    cleanup: categoryViewer.cleanup,
   }
 }

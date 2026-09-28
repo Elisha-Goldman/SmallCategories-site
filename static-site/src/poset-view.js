@@ -72,7 +72,7 @@ function localDiagram(poset, label, describe, selected, lower, upper) {
   </svg>`
 }
 
-export function mountPoset(element, poset, { kind, morphisms }) {
+export function mountPoset(element, poset, { kind, morphisms, onSelect }) {
   const label = kind === 'congruence' ? 'C' : 'I'
   const describe = kind === 'congruence'
     ? classes
@@ -100,7 +100,7 @@ export function mountPoset(element, poset, { kind, morphisms }) {
   const diagram = element.querySelector('[data-poset-diagram]')
   const detail = element.querySelector('[data-poset-detail]')
   let selected = 0
-  function select(id) {
+  function select(id, notify = false) {
     selected = id
     const node = poset.nodes[id]
     if (full) {
@@ -112,6 +112,7 @@ export function mountPoset(element, poset, { kind, morphisms }) {
     }
     detail.textContent = `${label}${id} = ${describe(node.value)}. Rank ${node.rank}. ` +
       `${lower[id].length} immediate lower, ${upper[id].length} immediate upper.`
+    if (notify) onSelect?.({ kind, id, value: node.value })
   }
   if (full) {
     diagram.innerHTML = fullDiagram(poset, label, describe, selected)
@@ -121,17 +122,17 @@ export function mountPoset(element, poset, { kind, morphisms }) {
   element.addEventListener('click', event => {
     const jump = event.target.closest('[data-poset-jump]')
     if (jump && element.contains(jump)) {
-      select(Number(jump.dataset.posetJump))
+      select(Number(jump.dataset.posetJump), true)
       return
     }
     const target = event.target.closest('[data-poset-node]')
-    if (target && element.contains(target)) select(Number(target.dataset.posetNode))
+    if (target && element.contains(target)) select(Number(target.dataset.posetNode), true)
   })
   element.addEventListener('keydown', event => {
     if (event.key !== 'Enter' && event.key !== ' ') return
     const target = event.target.closest('[data-poset-node]')
     if (!target || !element.contains(target)) return
     event.preventDefault()
-    select(Number(target.dataset.posetNode))
+    select(Number(target.dataset.posetNode), true)
   })
 }

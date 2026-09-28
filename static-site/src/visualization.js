@@ -3,6 +3,9 @@ import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } 
 import { select } from 'd3-selection'
 
 let nextVisualizationId = 0
+const idealColor = '#0f766e'
+const mutedColor = '#9ca3af'
+const congruenceColor = classId => `hsl(${Math.round((215 + classId * 137.508) % 360)} 66% 34%)`
 
 function categoryGraph(table, objects, morphisms) {
   const groups = new Map()
@@ -23,7 +26,9 @@ function categoryGraph(table, objects, morphisms) {
 }
 
 export function mountCategoryVisualization(element, table, objects, morphisms) {
-  if (!element || morphisms === 0 || objects === 0) return () => {}
+  if (!element || morphisms === 0 || objects === 0) {
+    return { highlight: () => {}, cleanup: () => {} }
+  }
 
   const { nodes, links } = categoryGraph(table, objects, morphisms)
   const nonEndomorphisms = links.filter(link => link.source !== link.target)
@@ -49,6 +54,7 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
     .attr('orient', 'auto-start-reverse')
     .append('path')
     .attr('d', 'M 0 0 L 10 5 L 0 10 z')
+    .attr('fill', 'context-stroke')
 
   const link = svg.append('g')
     .attr('class', 'viz-links')
@@ -60,12 +66,6 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
     .attr('id', (_, index) => `${id}-edge-${index}`)
     .attr('marker-end', `url(#${id}-arrow)`)
 
-  link.append('text')
-    .append('textPath')
-    .attr('href', (_, index) => `#${id}-edge-${index}`)
-    .attr('startOffset', '50%')
-    .text(link => link.members.join(', '))
-
   const loop = svg.append('g')
     .attr('class', 'viz-loops')
     .selectAll('g')
@@ -76,11 +76,18 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
     .attr('id', (_, index) => `${id}-loop-${index}`)
     .attr('marker-end', `url(#${id}-arrow)`)
 
-  loop.append('text')
-    .append('textPath')
-    .attr('href', (_, index) => `#${id}-loop-${index}`)
-    .attr('startOffset', '50%')
-    .text(link => link.members.join(', '))
+  for (const [groups, name] of [[link, 'edge'], [loop, 'loop']]) {
+    groups.append('text')
+      .append('textPath')
+      .attr('href', (_, index) => `#${id}-${name}-${index}`)
+      .attr('startOffset', '50%')
+      .each(function (group) {
+        group.members.forEach((morphism, index) => {
+          if (index) select(this).append('tspan').text(', ')
+          select(this).append('tspan').attr('data-morphism', morphism).text(morphism)
+        })
+      })
+  }
 
   const node = svg.append('g')
     .attr('class', 'viz-nodes')
@@ -140,12 +147,68 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
       subject.fy = null
     }))
 
-  const reset = element.closest('.viz-box')?.querySelector('[data-reset-viz]')
+  const box = element.closest('.viz-box')
+  const reset = box?.querySelector('[data-reset-viz]')
   const resetLayout = () => {
     seedPositions()
     simulation.alpha(1).restart()
   }
   reset?.addEventListener('click', resetLayout)
+
+  const highlightBox = box?.querySelector('[data-viz-highlight]')
+  const highlightStatus = box?.querySelector('[data-viz-highlight-status]')
+  const legend = box?.querySelector('[data-viz-legend]')
+  const clear = box?.querySelector('[data-clear-highlight]')
+  function highlight(selection) {
+    highlightBox.hidden = !selection
+    const colors = selection && Array.from({ length: morphisms }, (_, morphism) =>
+      selection.kind === 'congruence'
+        ? congruenceColor(selection.value[morphism])
+        : (selection.value & (1 << morphism)) ? idealColor : mutedColor)
+    function colorGroups(groups) {
+      groups.each(function (group) {
+        const groupColors = group.members.map(morphism => colors?.[morphism])
+        const pathColor = groupColors.every(color => color === groupColors[0])
+          ? groupColors[0] : '#6b7280'
+        select(this).select('path')
+          .style('stroke', selection ? pathColor : null)
+          .style('stroke-width', selection ? '2.3px' : null)
+        select(this).selectAll('tspan[data-morphism]')
+          .style('fill', function () { return selection ? colors[Number(this.getAttribute('data-morphism'))] : null })
+      })
+    }
+    colorGroups(link)
+    colorGroups(loop)
+    node.select('circle').style('fill', item => selection ? colors[item.id] : null)
+    node.select('text').style('fill', item =>
+      selection?.kind === 'ideal' && !(selection.value & (1 << item.id)) ? '#374151' : null)
+    if (!selection) {
+      legend.innerHTML = ''
+      return
+    }
+    const label = `${selection.kind === 'congruence' ? 'C' : 'I'}${selection.id}`
+    if (selection.kind === 'congruence') {
+      highlightStatus.textContent = `${label}: morphisms with the same color are identified.`
+      const classes = new Map()
+      selection.value.forEach((classId, morphism) => {
+        if (!classes.has(classId)) classes.set(classId, [])
+        classes.get(classId).push(morphism)
+      })
+      legend.innerHTML = [...classes].map(([classId, members]) =>
+        `<span class="viz-legend-item"><span class="viz-swatch" style="background:${congruenceColor(classId)}"></span>{${members.join(', ')}}</span>`).join('')
+    } else {
+      highlightStatus.textContent = `${label}: highlighted morphisms belong to the ideal.`
+      const inside = []
+      const outside = []
+      for (let morphism = 0; morphism < morphisms; morphism += 1) {
+        ((selection.value & (1 << morphism)) ? inside : outside).push(morphism)
+      }
+      legend.innerHTML = `<span class="viz-legend-item"><span class="viz-swatch" style="background:${idealColor}"></span>In: ${inside.length ? inside.join(', ') : '∅'}</span>
+        <span class="viz-legend-item"><span class="viz-swatch" style="background:${mutedColor}"></span>Out: ${outside.length ? outside.join(', ') : '∅'}</span>`
+    }
+  }
+  const clearHighlight = () => highlight(null)
+  clear?.addEventListener('click', clearHighlight)
 
   const observer = new ResizeObserver(entries => {
     const nextWidth = Math.max(320, entries[0].contentRect.width)
@@ -156,9 +219,13 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
   })
   observer.observe(element)
 
-  return () => {
-    observer.disconnect()
-    reset?.removeEventListener('click', resetLayout)
-    simulation.stop()
+  return {
+    highlight,
+    cleanup: () => {
+      observer.disconnect()
+      reset?.removeEventListener('click', resetLayout)
+      clear?.removeEventListener('click', clearHighlight)
+      simulation.stop()
+    },
   }
 }
