@@ -21,8 +21,9 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const SITE_DIR = resolve(SCRIPT_DIR, '..')
 const DEFAULT_DATABASE_DIR = resolve(SITE_DIR, '../../SmallCategories/database')
 const SOURCE_DIR = resolve(SITE_DIR, 'src')
-const FINAL_DIR = resolve(SITE_DIR, 'dist')
-const TEMP_DIR = resolve(SITE_DIR, '.dist-tmp')
+// The build fixture sets this to an isolated temporary directory.
+const FINAL_DIR = resolve(process.env.SMALLCATS_BUILD_OUTPUT || join(SITE_DIR, 'dist'))
+const TEMP_DIR = process.env.SMALLCATS_BUILD_OUTPUT ? `${FINAL_DIR}-tmp` : resolve(SITE_DIR, '.dist-tmp')
 const PUBLIC_FILES = ['.nojekyll', '_headers', 'favicon.svg', 'index.html']
 const SHARD_SIZE = 2048
 const PROPOSITION_BITS = 18

@@ -161,10 +161,14 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
   const clear = box?.querySelector('[data-clear-highlight]')
   function highlight(selection) {
     highlightBox.hidden = !selection
+    const selectedMorphisms = selection?.kind === 'center' || selection?.kind === 'trace'
+      ? new Set(selection.value) : null
+    const included = morphism => selection.kind === 'ideal'
+      ? Boolean(selection.value & (1 << morphism)) : selectedMorphisms.has(morphism)
     const colors = selection && Array.from({ length: morphisms }, (_, morphism) =>
       selection.kind === 'congruence'
         ? congruenceColor(selection.value[morphism])
-        : (selection.value & (1 << morphism)) ? idealColor : mutedColor)
+        : included(morphism) ? idealColor : mutedColor)
     function colorGroups(groups) {
       groups.each(function (group) {
         const groupColors = group.members.map(morphism => colors?.[morphism])
@@ -181,12 +185,13 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
     colorGroups(loop)
     node.select('circle').style('fill', item => selection ? colors[item.id] : null)
     node.select('text').style('fill', item =>
-      selection?.kind === 'ideal' && !(selection.value & (1 << item.id)) ? '#374151' : null)
+      selection && selection.kind !== 'congruence' && !included(item.id) ? '#374151' : null)
     if (!selection) {
       legend.innerHTML = ''
       return
     }
-    const label = `${selection.kind === 'congruence' ? 'C' : 'I'}${selection.id}`
+    const prefix = { congruence: 'C', ideal: 'I', center: 'Z', trace: 'T' }[selection.kind]
+    const label = `${prefix}${selection.id}`
     if (selection.kind === 'congruence') {
       highlightStatus.textContent = `${label}: morphisms with the same color are identified.`
       const classes = new Map()
@@ -197,13 +202,19 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
       legend.innerHTML = [...classes].map(([classId, members]) =>
         `<span class="viz-legend-item"><span class="viz-swatch" style="background:${congruenceColor(classId)}"></span>{${members.join(', ')}}</span>`).join('')
     } else {
-      highlightStatus.textContent = `${label}: highlighted morphisms belong to the ideal.`
+      highlightStatus.textContent = selection.kind === 'center'
+        ? `${label}: highlighted morphisms are its components at each object.`
+        : selection.kind === 'trace'
+          ? `${label}: highlighted endomorphisms share a trace class.`
+          : `${label}: highlighted morphisms belong to the ideal.`
       const inside = []
       const outside = []
       for (let morphism = 0; morphism < morphisms; morphism += 1) {
-        ((selection.value & (1 << morphism)) ? inside : outside).push(morphism)
+        (included(morphism) ? inside : outside).push(morphism)
       }
-      legend.innerHTML = `<span class="viz-legend-item"><span class="viz-swatch" style="background:${idealColor}"></span>In: ${inside.length ? inside.join(', ') : '∅'}</span>
+      const insideLabel = selection.kind === 'center' ? 'Components'
+        : selection.kind === 'trace' ? 'Class' : 'In'
+      legend.innerHTML = `<span class="viz-legend-item"><span class="viz-swatch" style="background:${idealColor}"></span>${insideLabel}: ${inside.length ? inside.join(', ') : '∅'}</span>
         <span class="viz-legend-item"><span class="viz-swatch" style="background:${mutedColor}"></span>Out: ${outside.length ? outside.join(', ') : '∅'}</span>`
     }
   }

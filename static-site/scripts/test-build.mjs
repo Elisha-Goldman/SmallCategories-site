@@ -10,7 +10,9 @@ import { tableSignature } from '../src/presentation.js'
 const execFileAsync = promisify(execFile)
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url))
 const SITE_DIR = resolve(SCRIPT_DIR, '..')
-const DIST_DIR = join(SITE_DIR, 'dist')
+// Keep the fixture build away from the local preview and its compiled database.
+const temporary = await mkdtemp(join(tmpdir(), 'smallcats-static-test-'))
+const DIST_DIR = join(temporary, 'dist')
 const DATA_VERSION = 'v6'
 const DATA_DIR = join(DIST_DIR, 'data', DATA_VERSION)
 
@@ -22,7 +24,6 @@ function jsonLine(value) {
   return `${JSON.stringify(value)}\n`
 }
 
-const temporary = await mkdtemp(join(tmpdir(), 'smallcats-static-test-'))
 try {
   const database = join(temporary, 'database')
   const websiteData = join(temporary, 'website-data')
@@ -55,7 +56,7 @@ try {
     join(SCRIPT_DIR, 'build.mjs'),
     '--database', database,
     '--website-data', websiteData,
-  ], { cwd: SITE_DIR })
+  ], { cwd: SITE_DIR, env: { ...process.env, SMALLCATS_BUILD_OUTPUT: DIST_DIR } })
   assert(stdout.includes('8 named categories') || stdout.includes('1 named categories'), 'names were not reported')
 
   const manifest = JSON.parse(await readFile(join(DATA_DIR, 'manifest.json'), 'utf8'))
