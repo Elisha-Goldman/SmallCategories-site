@@ -27,7 +27,7 @@ function categoryGraph(table, objects, morphisms) {
 
 export function mountCategoryVisualization(element, table, objects, morphisms) {
   if (!element || morphisms === 0 || objects === 0) {
-    return { highlight: () => {}, cleanup: () => {} }
+    return { highlight: () => {}, setLabels: () => {}, cleanup: () => {} }
   }
 
   const { nodes, links } = categoryGraph(table, objects, morphisms)
@@ -95,7 +95,7 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
     .data(nodes)
     .join('g')
     .attr('role', 'button')
-    .attr('aria-label', node => `Object ${node.id}; drag to rearrange`)
+    .attr('aria-label', node => `Object ${node.id}, identity id_${node.id}; drag to rearrange`)
 
   node.append('circle').attr('r', 17)
   node.append('text').attr('dy', '0.35em').text(node => node.id)
@@ -221,6 +221,11 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
   const clearHighlight = () => highlight(null)
   clear?.addEventListener('click', clearHighlight)
 
+  function setLabels(labels) {
+    svg.selectAll('tspan[data-morphism]')
+      .text(function () { return labels[Number(this.getAttribute('data-morphism'))] })
+  }
+
   const observer = new ResizeObserver(entries => {
     const nextWidth = Math.max(320, entries[0].contentRect.width)
     if (Math.abs(nextWidth - width) < 1) return
@@ -232,6 +237,7 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
 
   return {
     highlight,
+    setLabels,
     cleanup: () => {
       observer.disconnect()
       reset?.removeEventListener('click', resetLayout)

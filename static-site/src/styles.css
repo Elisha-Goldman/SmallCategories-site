@@ -106,7 +106,18 @@ fieldset {
 .table-wrap th { font-weight: 600; }
 .matrix { width: auto !important; min-width: 20rem; border-collapse: collapse; }
 .matrix th, .matrix td { min-width: 2.4rem; border: 1px solid var(--smallcats-border); text-align: center; }
+.matrix th, .matrix td { white-space: nowrap; }
 .undefined { color: #9ca3af; }
+.presentation-generators { margin-bottom: 0.6rem; }
+.presentation-details { margin: 0.75rem 0; }
+.presentation-details summary { cursor: pointer; }
+.presentation-details form { margin-top: 0.6rem; }
+.presentation-name { max-width: 9rem; }
+.presentation-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+.morphism-key { display: flex; flex-wrap: wrap; gap: 0.25rem 0.8rem; margin: 0.75rem 0; }
+.morphism-key-item { white-space: nowrap; }
+.presentation-relations { columns: 2; margin: 0.5rem 0; padding-left: 1.5rem; }
+.presentation-relations li { break-inside: avoid; }
 .impossible { background: #f1f1f1; }
 .stats-table td, .stats-table th { font-variant-numeric: tabular-nums; }
 .stats-help { margin-top: 0.75rem; text-wrap: wrap; }

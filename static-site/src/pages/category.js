@@ -11,15 +11,8 @@ import { mountCategoryVisualization } from '../visualization.js'
 import { congruencePoset, idealPoset } from '../posets.js'
 import { mountPoset } from '../poset-view.js'
 import { categoryCenter, categoryTrace } from '../category-algebra.js'
+import { mountCategoryPresentation } from '../category-presentation.js'
 import categoryTemplate from './category.html'
-
-function renderMatrix(table, morphisms) {
-  if (morphisms === 0) return '<p>The empty category has no morphisms or multiplication table.</p>'
-  return `<div class="table-wrap"><table class="matrix"><tbody>
-    <tr><th><i>row</i> ∘ <i>col</i></th>${Array.from({ length: morphisms }, (_, index) => `<th>${index}</th>`).join('')}</tr>
-    ${table.map((row, rowIndex) => `<tr><th>${rowIndex}</th>${row.map(value => `<td>${value < morphisms ? value : '<span class="undefined">/</span>'}</td>`).join('')}</tr>`).join('')}
-  </tbody></table></div>`
-}
 
 // Every proposition is known for every category, so there is no longer an
 // "unknown" case to render.
@@ -105,11 +98,14 @@ export async function renderCategoryPage({ app, morphisms, objects, index, isCur
           <div class="viz-toolbar"><span data-viz-highlight-status role="status" aria-live="polite"></span><button class="button is-small is-light" type="button" data-clear-highlight>Clear highlight</button></div>
           <div class="viz-legend" data-viz-legend></div>
         </div>
-      </div><p class="help">Morphisms 0 through ${objects - 1} are identities, shown as objects.</p>`
+      </div><p class="help">${objects === 1
+        ? 'Object 0 represents the identity morphism id<sub>0</sub>.'
+        : `Objects 0 through ${objects - 1} represent the identity morphisms id<sub>0</sub> through id<sub>${objects - 1}</sub>.`}</p>`
     : '<p>The empty category has no quiver.</p>'
-  app.querySelector('[data-category-table]').innerHTML = `${renderMatrix(table, morphisms)}${morphisms > 0 ? '<p class="help">“/” indicates an undefined composition.</p>' : ''}`
   app.querySelector('[data-category-facts]').innerHTML = renderCategoryFacts(propositions, mask)
   const categoryViewer = mountCategoryVisualization(app.querySelector('#category-viz'), table, objects, morphisms)
+  mountCategoryPresentation(app.querySelector('[data-category-table]'), table, objects,
+    labels => categoryViewer.setLabels(labels))
 
   for (const [selector, calculate, kind] of [
     ['[data-category-congruences]', () => congruencePoset(table, objects), 'congruence'],
