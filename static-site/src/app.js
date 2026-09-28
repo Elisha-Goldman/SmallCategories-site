@@ -8,6 +8,7 @@ import { renderHomePage } from './pages/home.js'
 import { renderNotFoundPage } from './pages/not-found.js'
 import { renderPropositionPage } from './pages/proposition.js'
 import { renderPropositionsPage } from './pages/propositions.js'
+import { renderPosetsPage } from './pages/posets.js'
 import { renderQueryPage } from './pages/query.js'
 import { renderSmallCatPage } from './pages/smolcats.js'
 import { renderStatsPage } from './pages/stats.js'
@@ -82,6 +83,7 @@ async function renderRoute() {
     if (path === '/') await renderHomePage(pageContext)
     else if (path === '/cats') await renderCategoriesPage(pageContext)
     else if (path === '/props') await renderPropositionsPage(pageContext)
+    else if (path === '/posets') visualizationCleanup = renderPosetsPage(pageContext)
     else if (path === '/query' || path === '/query_mobile') await renderQueryPage(pageContext)
     else if (path === '/stats') await renderStatsPage(pageContext)
     else if (path === '/enumeration') await renderEnumerationPage(pageContext)

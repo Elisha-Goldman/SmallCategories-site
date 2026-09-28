@@ -85,6 +85,7 @@ try {
   const styleBundleName = /href="\/(styles-[A-Z0-9]+\.css)"/.exec(indexHtml)?.[1]
   assert(appBundleName && styleBundleName, 'fingerprinted assets were not linked from the app shell')
   assert(indexHtml.includes('fa-solid fa-shuffle'), 'the original navbar icon was not retained')
+  assert(indexHtml.includes('href="/posets"'), 'the posets page is missing from the navigation')
   assert(!indexHtml.includes('/support') && !indexHtml.toLowerCase().includes('ko-fi'), 'retired support links leaked into the app shell')
   const bundledJavaScript = (await Promise.all(
     (await readdir(DIST_DIR, { recursive: true }))
@@ -101,6 +102,13 @@ try {
   const headers = await readFile(join(DIST_DIR, '_headers'), 'utf8')
   assert(headers.includes(`/data/${DATA_VERSION}/bitmaps/*`), 'cache headers use the wrong data namespace')
   assert((await readdir(join(DIST_DIR, 'data'))).join() === DATA_VERSION, 'the build emitted an unexpected data namespace')
+  for (const [size, count] of [[4, 1], [5, 4], [6, 25], [7, 174], [8, 1481], [9, 14136]]) {
+    const filename = `n-${size}.json`
+    const source = await readFile(join(SITE_DIR, 'src', 'poset-data', 'v1', filename), 'utf8')
+    const published = await readFile(join(DIST_DIR, 'poset-data', 'v1', filename), 'utf8')
+    assert(published === source, `the size-${size} poset data was not published unchanged`)
+    assert(JSON.parse(published).length === count, `wrong number of size-${size} poset embeddings`)
+  }
   const bundledStyles = await readFile(join(DIST_DIR, styleBundleName), 'utf8')
   assert(bundledStyles.includes('#app:focus{outline:none}'), 'the application focus outline was not suppressed')
   const outputFiles = await readdir(DIST_DIR)

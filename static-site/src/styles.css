@@ -160,6 +160,30 @@ fieldset {
 .viz-nodes circle { fill: var(--smallcats-blue); stroke: white; stroke-width: 1.5; }
 .viz-nodes text { fill: white; text-anchor: middle; pointer-events: none; font-size: 13px; font-weight: 600; }
 
+.posets-page .lead { margin-bottom: 1.5rem; }
+.posets-explorer { max-width: 64rem; }
+.posets-heading { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 1rem; }
+.posets-heading .field { min-width: 13rem; margin-bottom: 0; }
+.posets-position { margin: 0 0 0.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.posets-plot-wrap { width: min(100%, 34rem); margin: 0.5rem auto 0; }
+.posets-plot-wrap svg { display: block; width: 100%; height: auto; }
+.posets-grid-line { stroke: #e5e5e5; stroke-width: 1; }
+.posets-axis-tick { fill: #6b7280; font-size: 12px; }
+.posets-axis-title { fill: #363636; font-size: 12px; }
+.posets-cover-line { stroke: #c87632; stroke-width: 2; stroke-linecap: round; }
+.posets-point { fill: var(--smallcats-blue); stroke: white; stroke-width: 1.5; }
+.posets-permutation { text-align: center; font-variant-numeric: tabular-nums; }
+.posets-legend { text-align: center; margin-bottom: 0.75rem; }
+.posets-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.posets-controls label { display: flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
+.posets-seek { flex: 1 1 10rem; }
+.posets-seek input { width: 100%; }
+.posets-frame input { width: 6.5rem; font-variant-numeric: tabular-nums; }
+.posets-speed select { width: 5.5rem; }
+.posets-download { margin-top: 0.75rem; }
+.posets-method { margin-top: 2rem; max-width: 75ch; }
+.posets-method h2:not(:first-child) { margin-top: 1.5rem; }
+
 .site-footer { padding: 2rem 1.5rem; text-align: center; }
 
 @media (max-width: 768px) {

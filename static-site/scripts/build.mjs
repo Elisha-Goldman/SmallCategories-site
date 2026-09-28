@@ -217,6 +217,7 @@ async function build() {
   await mkdir(TEMP_DIR, { recursive: true })
   await Promise.all(PUBLIC_FILES.map(filename =>
     cp(join(SOURCE_DIR, filename), join(TEMP_DIR, filename))))
+  await cp(join(SOURCE_DIR, 'poset-data'), join(TEMP_DIR, 'poset-data'), { recursive: true })
 
   const cells = []
   let categoryCount = 0

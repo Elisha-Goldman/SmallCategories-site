@@ -1,0 +1,63 @@
+<section class="hero is-link is-small">
+  <div class="hero-body">
+    <div class="container">
+      <h1 class="title"><span class="icon-text"><span class="icon"><i class="fa-solid fa-diagram-project" aria-hidden="true"></i></span><span>Prime posets</span></span></h1>
+    </div>
+  </div>
+</section>
+
+<section class="section container posets-page">
+  <p class="lead">Explore one two-dimensional embedding of every nonisomorphic prime poset of exact order dimension 2, with 4 to 9 elements.</p>
+
+  <div class="posets-explorer">
+    <div class="posets-heading">
+      <div class="field">
+        <label for="posets-size">Number of elements</label>
+        <div class="select"><select id="posets-size" data-poset-size>
+          <option value="4">4 · 1 poset</option>
+          <option value="5">5 · 4 posets</option>
+          <option value="6">6 · 25 posets</option>
+          <option value="7">7 · 174 posets</option>
+          <option value="8">8 · 1,481 posets</option>
+          <option value="9">9 · 14,136 posets</option>
+        </select></div>
+      </div>
+      <p class="posets-position" data-poset-position role="status" aria-live="polite">Loading…</p>
+    </div>
+
+    <div class="posets-plot-wrap">
+      <svg data-poset-plot role="img" aria-label="Two-dimensional embedding of a prime poset">
+        <title>Prime poset in two dimensions</title>
+        <desc>Points are poset elements. The two coordinates are ranks in linear extensions; lines show cover relations.</desc>
+        <g data-poset-grid></g><g data-poset-covers></g><g data-poset-points></g>
+      </svg>
+    </div>
+    <p class="posets-permutation" data-poset-permutation></p>
+    <p class="help posets-legend">A point is below another exactly when it is southwest of it. Lines show cover relations.</p>
+
+    <div class="posets-controls">
+      <button class="button" type="button" data-poset-prev disabled>Previous</button>
+      <button class="button is-link" type="button" data-poset-play disabled>Play</button>
+      <button class="button" type="button" data-poset-next disabled>Next</button>
+      <label class="posets-seek">Seek <input data-poset-seek type="range" min="1" max="1" value="1" disabled></label>
+      <label class="posets-frame">Frame <input data-poset-frame type="number" min="1" max="1" value="1" disabled></label>
+      <label class="posets-speed">Speed <span class="select"><select data-poset-speed>
+        <option value="1000">1/s</option>
+        <option value="500" selected>2/s</option>
+        <option value="250">4/s</option>
+        <option value="125">8/s</option>
+        <option value="63">16/s</option>
+      </select></span></label>
+    </div>
+    <p class="help posets-download" data-poset-download-row hidden><a data-poset-download href="#" download>Download this size's permutation data</a></p>
+    <p class="notification is-danger is-light" data-poset-error role="alert" hidden></p>
+  </div>
+
+  <div class="content posets-method">
+    <h2>How to read the drawing</h2>
+    <p>Each point is one element of the poset. Its coordinates are its ranks in two linear extensions whose intersection is the poset. The rank sequence below the plot lists the vertical coordinates from left to right. Each frame is one isomorphism class, not every possible drawing of that class.</p>
+    <h2>How the representatives were selected</h2>
+    <p>The <a href="https://github.com/diracdeltafunk/SmallCategories-site/tree/master/research/prime_posets">generator and verification code</a> adds a maximal element above each order ideal of every smaller poset, canonicalizes the resulting directed comparability graph to remove isomorphic copies, and rejects posets with a nontrivial module. It finds two linear extensions that order every incomparable pair oppositely, then verifies that the resulting coordinate order recovers every comparison. The counts for sizes 4 through 9 are 1, 4, 25, 174, 1481, and 14136.</p>
+    <p>The seven-element row is useful to inspect: the <a href="https://doi.org/10.1016/0012-365X(94)90370-0">1994 count of two-dimensional posets</a> gives 174 prime cases, while the displayed Table 1 in the <a href="https://www.researchgate.net/publication/266355942_On_recognizing_the_dimension_of_a_poset">1998 paper</a> gives 124. The generator here produces 174 distinct representatives; the cause of the displayed discrepancy is unclear.</p>
+  </div>
+</section>

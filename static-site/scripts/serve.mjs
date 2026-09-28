@@ -5,7 +5,7 @@ import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const SITE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const DIST_DIR = resolve(SITE_DIR, 'dist')
+const DIST_DIR = resolve(process.env.SMALLCATS_BUILD_OUTPUT || resolve(SITE_DIR, 'dist'))
 const PORT = Number(process.env.PORT || 8000)
 const TYPES = {
   '.bin': 'application/octet-stream',

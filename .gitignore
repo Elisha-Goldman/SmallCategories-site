@@ -2,3 +2,5 @@
 node_modules
 static-site/dist
 static-site/.dist-tmp
+__pycache__/
+*.pyc
