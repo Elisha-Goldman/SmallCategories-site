@@ -1,6 +1,6 @@
 # Prime posets by order dimension
 
-The [poset explorer](https://smallcats.info/posets) displays one coordinate
+The proposed [poset explorer](../../static-site/src/pages/posets.html) displays one coordinate
 embedding of every nonisomorphic prime poset of order dimension exactly 2
 with 4 through 9 elements. Here, *prime* means that the poset has no
 nontrivial module (equivalently, it is irreducible under lexicographic
