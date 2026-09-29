@@ -31,6 +31,8 @@ Each category page also computes its center and trace. The center is the commuta
 
 The category multiplication table defaults to shortest words in a suggested smallest generating set, with identities labeled by object. Readers can edit the generators and their names, inspect rewriting relations derived from the table, and expand the raw numbered table. A generator choice is accepted only when it reaches every morphism.
 
+The same morphism words appear in the quiver, congruence and ideal descriptions, center components, trace classes, and highlight legends. Editing the presentation updates these views together; the raw numbered table and editor retain database IDs for reference.
+
 Install the pinned dependencies and make a production build:
 
 ```sh

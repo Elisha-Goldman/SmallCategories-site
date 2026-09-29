@@ -1,16 +1,18 @@
-function members(mask, morphisms) {
+import { escapeHtml } from './ui.js'
+
+function members(mask, morphisms, labels) {
   const values = []
   for (let index = 0; index < morphisms; index += 1) {
-    if (mask & (1 << index)) values.push(index)
+    if (mask & (1 << index)) values.push(labels[index])
   }
   return values.length ? `{${values.join(', ')}}` : '∅'
 }
 
-function classes(partition) {
+function classes(partition, labels) {
   const groups = new Map()
   partition.forEach((label, morphism) => {
     if (!groups.has(label)) groups.set(label, [])
-    groups.get(label).push(morphism)
+    groups.get(label).push(labels[morphism])
   })
   return `{${[...groups.values()].map(group => `{${group.join(', ')}}`).join(', ')}}`
 }
@@ -18,8 +20,8 @@ function classes(partition) {
 function nodeMarkup(node, position, label, description, selected) {
   const name = `${label}${node.id}`
   const radiusX = Math.max(16, name.length * 3.5 + 5)
-  return `<g class="poset-node${selected ? ' is-selected' : ''}" data-poset-node="${node.id}" tabindex="0" role="button" aria-label="${name}: ${description}">
-    <title>${name}: ${description}</title>
+  return `<g class="poset-node${selected ? ' is-selected' : ''}" data-poset-node="${node.id}" tabindex="0" role="button" aria-label="${name}: ${escapeHtml(description)}">
+    <title>${name}: ${escapeHtml(description)}</title>
     <ellipse cx="${position.x}" cy="${position.y}" rx="${radiusX}" ry="16"></ellipse>
     <text x="${position.x}" y="${position.y + 4}">${name}</text>
   </g>`
@@ -72,11 +74,12 @@ function localDiagram(poset, label, describe, selected, lower, upper) {
   </svg>`
 }
 
-export function mountPoset(element, poset, { kind, morphisms, onSelect }) {
+export function mountPoset(element, poset, { kind, morphisms, labels, onSelect }) {
+  let currentLabels = labels || Array.from({ length: morphisms }, (_, morphism) => String(morphism))
   const label = kind === 'congruence' ? 'C' : 'I'
   const describe = kind === 'congruence'
-    ? classes
-    : mask => members(mask, morphisms)
+    ? partition => classes(partition, currentLabels)
+    : mask => members(mask, morphisms, currentLabels)
   const order = kind === 'congruence' ? 'refinement' : 'inclusion'
   const rankMeaning = kind === 'congruence'
     ? 'Rank counts class mergers from equality.'
@@ -135,4 +138,14 @@ export function mountPoset(element, poset, { kind, morphisms, onSelect }) {
     event.preventDefault()
     select(Number(target.dataset.posetNode), true)
   })
+  return {
+    setLabels(nextLabels) {
+      currentLabels = nextLabels
+      if (full) {
+        diagram.innerHTML = fullDiagram(poset, label, describe, selected)
+        diagram.scrollLeft = Math.max(0, (diagram.scrollWidth - diagram.clientWidth) / 2)
+      }
+      select(selected)
+    },
+  }
 }

@@ -1,6 +1,7 @@
 import { drag } from 'd3-drag'
 import { forceCenter, forceCollide, forceLink, forceManyBody, forceSimulation } from 'd3-force'
 import { select } from 'd3-selection'
+import { escapeHtml } from './ui.js'
 
 let nextVisualizationId = 0
 const idealColor = '#0f766e'
@@ -31,6 +32,7 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
   }
 
   const { nodes, links } = categoryGraph(table, objects, morphisms)
+  let labels = Array.from({ length: morphisms }, (_, morphism) => String(morphism))
   const nonEndomorphisms = links.filter(link => link.source !== link.target)
   const endomorphisms = links.filter(link => link.source === link.target)
   const id = `category-quiver-${nextVisualizationId++}`
@@ -76,18 +78,27 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
     .attr('id', (_, index) => `${id}-loop-${index}`)
     .attr('marker-end', `url(#${id}-arrow)`)
 
+  const groupLabels = []
   for (const [groups, name] of [[link, 'edge'], [loop, 'loop']]) {
-    groups.append('text')
+    groups.append('title')
+    groupLabels.push(groups.append('text')
       .append('textPath')
       .attr('href', (_, index) => `#${id}-${name}-${index}`)
       .attr('startOffset', '50%')
-      .each(function (group) {
-        group.members.forEach((morphism, index) => {
-          if (index) select(this).append('tspan').text(', ')
-          select(this).append('tspan').attr('data-morphism', morphism).text(morphism)
-        })
-      })
+      .text(group => group.members.length === 1 ? group.members[0] : `${group.members.length} morphisms`))
   }
+
+  const morphismList = select(element).append('div')
+    .attr('class', 'viz-morphism-list')
+    .attr('aria-label', 'Morphisms in the quiver')
+  morphismList.append('strong').text('Morphisms:')
+  const morphismItems = morphismList.selectAll('span.viz-morphism-item')
+    .data(Array.from({ length: morphisms }, (_, morphism) => morphism))
+    .join('span')
+    .attr('class', 'viz-morphism-item')
+    .attr('title', morphism => `Morphism ${morphism}`)
+  morphismItems.append('span').attr('class', 'viz-swatch').attr('aria-hidden', 'true')
+  morphismItems.append('code').text(morphism => labels[morphism])
 
   const node = svg.append('g')
     .attr('class', 'viz-nodes')
@@ -159,7 +170,12 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
   const highlightStatus = box?.querySelector('[data-viz-highlight-status]')
   const legend = box?.querySelector('[data-viz-legend]')
   const clear = box?.querySelector('[data-clear-highlight]')
+  let currentSelection = null
+  const labeledSet = members => members.length
+    ? `{${members.map(morphism => escapeHtml(labels[morphism])).join(', ')}}`
+    : '∅'
   function highlight(selection) {
+    currentSelection = selection
     highlightBox.hidden = !selection
     const selectedMorphisms = selection?.kind === 'center' || selection?.kind === 'trace'
       ? new Set(selection.value) : null
@@ -177,12 +193,14 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
         select(this).select('path')
           .style('stroke', selection ? pathColor : null)
           .style('stroke-width', selection ? '2.3px' : null)
-        select(this).selectAll('tspan[data-morphism]')
-          .style('fill', function () { return selection ? colors[Number(this.getAttribute('data-morphism'))] : null })
+        select(this).select('textPath')
+          .style('fill', selection ? pathColor : null)
       })
     }
     colorGroups(link)
     colorGroups(loop)
+    morphismItems.select('.viz-swatch')
+      .style('background-color', morphism => selection ? colors[morphism] : null)
     node.select('circle').style('fill', item => selection ? colors[item.id] : null)
     node.select('text').style('fill', item =>
       selection && selection.kind !== 'congruence' && !included(item.id) ? '#374151' : null)
@@ -200,7 +218,7 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
         classes.get(classId).push(morphism)
       })
       legend.innerHTML = [...classes].map(([classId, members]) =>
-        `<span class="viz-legend-item"><span class="viz-swatch" style="background:${congruenceColor(classId)}"></span>{${members.join(', ')}}</span>`).join('')
+        `<span class="viz-legend-item"><span class="viz-swatch" style="background:${congruenceColor(classId)}"></span>${labeledSet(members)}</span>`).join('')
     } else {
       highlightStatus.textContent = selection.kind === 'center'
         ? `${label}: highlighted morphisms are its components at each object.`
@@ -214,16 +232,25 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
       }
       const insideLabel = selection.kind === 'center' ? 'Components'
         : selection.kind === 'trace' ? 'Class' : 'In'
-      legend.innerHTML = `<span class="viz-legend-item"><span class="viz-swatch" style="background:${idealColor}"></span>${insideLabel}: ${inside.length ? inside.join(', ') : '∅'}</span>
-        <span class="viz-legend-item"><span class="viz-swatch" style="background:${mutedColor}"></span>Out: ${outside.length ? outside.join(', ') : '∅'}</span>`
+      legend.innerHTML = `<span class="viz-legend-item"><span class="viz-swatch" style="background:${idealColor}"></span>${insideLabel}: ${labeledSet(inside)}</span>
+        <span class="viz-legend-item"><span class="viz-swatch" style="background:${mutedColor}"></span>Out: ${labeledSet(outside)}</span>`
     }
   }
   const clearHighlight = () => highlight(null)
   clear?.addEventListener('click', clearHighlight)
 
-  function setLabels(labels) {
-    svg.selectAll('tspan[data-morphism]')
-      .text(function () { return labels[Number(this.getAttribute('data-morphism'))] })
+  function setLabels(nextLabels) {
+    labels = nextLabels
+    morphismItems.select('code').text(morphism => labels[morphism])
+    for (const groupText of groupLabels) {
+      groupText.text(group => group.members.length === 1 && labels[group.members[0]].length <= 12
+        ? labels[group.members[0]]
+        : `${group.members.length} morphism${group.members.length === 1 ? '' : 's'}`)
+    }
+    for (const groups of [link, loop]) {
+      groups.select('title').text(group => group.members.map(morphism => labels[morphism]).join(', '))
+    }
+    highlight(currentSelection)
   }
 
   const observer = new ResizeObserver(entries => {

@@ -131,8 +131,7 @@ export function mountCategoryPresentation(element, table, objects, onLabelsChang
       ? `<ul class="presentation-relations">${relations.map(({ left, right, product }) =>
         `<li><code>${escapeHtml(left.map(generator => names.get(generator)).join(' '))}</code> = <code>${right.length ? escapeHtml(right.map(generator => names.get(generator)).join(' ')) : `id<sub>${product}</sub>`}</code></li>`).join('')}</ul>`
       : '<p class="help">No nontrivial relations are needed.</p>'
-    onLabelsChange(Array.from({ length: n }, (_, morphism) =>
-      names.get(morphism) || String(morphism)))
+    onLabelsChange(textLabels)
   }
 
   function fillForm(generators, names) {
