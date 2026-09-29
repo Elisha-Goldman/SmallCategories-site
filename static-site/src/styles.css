@@ -112,6 +112,8 @@ fieldset {
 .presentation-details { margin: 0.75rem 0; }
 .presentation-details summary { cursor: pointer; }
 .presentation-details form { margin-top: 0.6rem; }
+.presentation-original p { margin: 0.25rem 0 0; }
+.presentation-original pre { margin: 0 0 0.35rem; padding: 0.2rem 0.6rem; border-left: 2px solid var(--smallcats-border); background: transparent; overflow-x: auto; }
 .presentation-name { max-width: 9rem; }
 .presentation-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
 .morphism-key { display: flex; flex-wrap: wrap; gap: 0.25rem 0.8rem; margin: 0.75rem 0; }

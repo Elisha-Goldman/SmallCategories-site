@@ -92,7 +92,7 @@ function completeRules(presentation, maxPaths, maxLength) {
   return rules
 }
 
-export function completeFinitePresentation(presentation, { maxPaths = 12000, maxLength = 16 } = {}) {
+export function completeFinitePresentation(presentation, { maxPaths = 12000, maxLength = 16, includeDetails = false } = {}) {
   const rules = completeRules(presentation, maxPaths, maxLength)
   const morphisms = presentation.objects.map((_, source) => ({ source, target: source, word: [] }))
   const indexOf = new Map(morphisms.map((path, index) => [pathKey(path.source, path.word), index]))
@@ -124,5 +124,10 @@ export function completeFinitePresentation(presentation, { maxPaths = 12000, max
     if (result === undefined) throw new Error('Could not compose paths in the presentation.')
     return result
   }))
-  return { objects: presentation.objects.length, morphisms: count, table }
+  const result = { objects: presentation.objects.length, morphisms: count, table }
+  if (includeDetails) {
+    result.generatorMorphisms = presentation.generators.map((edge, generator) =>
+      indexOf.get(pathKey(edge.source, reduce([generator], rules, maxPaths))))
+  }
+  return result
 }

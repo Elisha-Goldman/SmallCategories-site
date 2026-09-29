@@ -33,6 +33,8 @@ The category multiplication table defaults to shortest words in a suggested smal
 
 The same morphism words appear in the quiver, congruence and ideal descriptions, center components, trace classes, and highlight legends. Editing the presentation updates these views together; the raw numbered table and editor retain database IDs for reference.
 
+A category link returned by the generators-and-relations query carries the entered presentation in its URL. The category page matches its objects and generators to the stored table, starts with those names and generator words, and shows the original query relations. The presentation editor can restore the query names or switch to the suggested generators.
+
 Install the pinned dependencies and make a production build:
 
 ```sh

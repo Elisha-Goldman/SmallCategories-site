@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
-import { completePresentation, isomorphicTables, parsePresentation, tableSignature } from '../src/presentation.js'
+import { completePresentation, isomorphicTables, isomorphismMapping, parsePresentation, tableSignature } from '../src/presentation.js'
+import { presentationFromQuery } from '../src/category-query-presentation.js'
 
 function resolve(objects, generators = '', relations = '') {
   return completePresentation(parsePresentation({ objects, generators, relations }))
@@ -19,7 +20,10 @@ function assertAssociative({ table, morphisms }) {
 
 assert.deepEqual(resolve('x'), { objects: 1, morphisms: 1, table: [[0]] })
 assert.deepEqual(resolve(''), { objects: 0, morphisms: 0, table: [] })
+assert.deepEqual(presentationFromQuery({ objects: '', generators: '', relations: '' }, [], 0)?.objectNames, [])
 assert.equal(resolve('x y').morphisms, 2)
+assert.deepEqual(presentationFromQuery({ objects: 'alpha beta', generators: '', relations: '' }, [[0, 2], [2, 1]], 2)?.objectNames,
+  ['alpha', 'beta'])
 
 const arrow = resolve('x y', 'f: x -> y')
 assert.equal(arrow.morphisms, 3)
@@ -34,6 +38,13 @@ const swappedArrow = arrow.table.map((_, row) =>
   }))
 assert.equal(tableSignature(arrow.table, 2), tableSignature(swappedArrow, 2))
 assert.equal(isomorphicTables(arrow.table, swappedArrow, 2), true)
+assert.deepEqual(isomorphismMapping(arrow.table, swappedArrow, 2), [1, 0, 2])
+assert.deepEqual(presentationFromQuery({ objects: 'x y', generators: 'f: x -> y', relations: '' }, swappedArrow, 2), {
+  objectNames: ['y', 'x'],
+  generators: [{ morphism: 2, name: 'f' }],
+  raw: { objects: 'x y', generators: 'f: x -> y', relations: '' },
+  redundantGenerators: 0,
+})
 
 const triangle = resolve('x y z', 'f: x -> y\ng: y -> z\nh: x -> z', 'f g = h')
 assert.equal(triangle.morphisms, 6)
@@ -49,6 +60,13 @@ assert.deepEqual(idempotent.table, [[0, 1], [1, 1]])
 const involution = resolve('x', 'a: x -> x', 'a a = id_x')
 assert.deepEqual(involution.table, [[0, 1], [1, 0]])
 assert.equal(isomorphicTables(idempotent.table, involution.table, 1), false)
+assert.equal(isomorphismMapping(idempotent.table, involution.table, 1), null)
+const redundant = parsePresentation({ objects: 'x', generators: 'a: x -> x\nb: x -> x', relations: 'a a = a\nb = a' })
+assert.deepEqual(completePresentation(redundant, { includeDetails: true }).generatorMorphisms, [1, 1])
+assert.deepEqual(presentationFromQuery({ objects: 'x', generators: 'a: x -> x\nb: x -> x', relations: 'a a = a\nb = a' }, idempotent.table, 1).generators,
+  [{ morphism: 1, name: 'a' }])
+const identityGenerator = { objects: 'x', generators: 'e: x -> x', relations: 'e = id_x' }
+assert.deepEqual(presentationFromQuery(identityGenerator, [[0]], 1)?.generators, [])
 assert.equal(resolve('x', 'a: x -> x', 'a a a = id_x').morphisms, 3)
 
 // Paths are in traversal order. These relations present D3, the nonabelian

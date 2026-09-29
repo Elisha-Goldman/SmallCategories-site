@@ -118,9 +118,9 @@ export function tableSignature(table, objects) {
   return hash >>> 0
 }
 
-export function isomorphicTables(left, right, objects) {
+export function isomorphismMapping(left, right, objects) {
   const n = left.length
-  if (right.length !== n) return false
+  if (right.length !== n) return null
   const leftEnds = endpoints(left, objects)
   const rightEnds = endpoints(right, objects)
   const leftFeatures = left.map((_, index) => elementSignature(left, index))
@@ -169,5 +169,9 @@ export function isomorphicTables(left, right, objects) {
     }
     return false
   }
-  return search(0)
+  return search(0) ? mapping : null
+}
+
+export function isomorphicTables(left, right, objects) {
+  return isomorphismMapping(left, right, objects) !== null
 }

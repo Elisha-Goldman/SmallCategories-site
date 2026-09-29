@@ -12,6 +12,7 @@ import { congruencePoset, idealPoset } from '../posets.js'
 import { mountPoset } from '../poset-view.js'
 import { categoryCenter, categoryTrace } from '../category-algebra.js'
 import { mountCategoryPresentation } from '../category-presentation.js'
+import { presentationFromQuery, presentationQueryKeys } from '../category-query-presentation.js'
 import categoryTemplate from './category.html'
 
 // Every proposition is known for every category, so there is no longer an
@@ -87,6 +88,20 @@ export async function renderCategoryPage({ app, morphisms, objects, index, isCur
   if (!isCurrent()) return { found: true, stale: true, cleanup: () => {} }
 
   const { table, mask } = category
+  const params = new URLSearchParams(window.location.search)
+  const hasQueryPresentation = Object.values(presentationQueryKeys).every(key => params.has(key))
+  let queryPresentation = null
+  if (hasQueryPresentation) {
+    try {
+      queryPresentation = presentationFromQuery({
+        objects: params.get(presentationQueryKeys.objects),
+        generators: params.get(presentationQueryKeys.generators),
+        relations: params.get(presentationQueryKeys.relations),
+      }, table, objects)
+    } catch {
+      // A malformed or unmatched link falls back to the category's suggestion.
+    }
+  }
   const label = categoryLabel(morphisms, objects, index)
   setTitle(label)
   app.innerHTML = categoryTemplate
@@ -112,9 +127,7 @@ export async function renderCategoryPage({ app, morphisms, objects, index, isCur
           <div class="viz-toolbar"><span data-viz-highlight-status role="status" aria-live="polite"></span><button class="button is-small is-light" type="button" data-clear-highlight>Clear highlight</button></div>
           <div class="viz-legend" data-viz-legend></div>
         </div>
-      </div><p class="help">${objects === 1
-        ? 'Object 0 represents the identity morphism id<sub>0</sub>.'
-        : `Objects 0 through ${objects - 1} represent the identity morphisms id<sub>0</sub> through id<sub>${objects - 1}</sub>.`}</p>`
+      </div><p class="help" data-category-identity-note></p>`
     : '<p>The empty category has no quiver.</p>'
   app.querySelector('[data-category-facts]').innerHTML = renderCategoryFacts(propositions, mask)
   const categoryViewer = mountCategoryVisualization(app.querySelector('#category-viz'), table, objects, morphisms)
@@ -125,10 +138,18 @@ export async function renderCategoryPage({ app, morphisms, objects, index, isCur
     view.setLabels(labels)
   }
   mountCategoryPresentation(app.querySelector('[data-category-table]'), table, objects,
-    nextLabels => {
+    (nextLabels, objectNames) => {
       labels = nextLabels
       labeledViews.forEach(view => view.setLabels(labels))
-    })
+      categoryViewer.setObjectLabels(objectNames)
+      const note = app.querySelector('[data-category-identity-note]')
+      if (note) note.innerHTML = `Object identities: ${objectNames.map(name =>
+        `${escapeHtml(name)} (id<sub>${escapeHtml(name)}</sub>)`).join(', ')}.`
+    }, queryPresentation)
+  if (hasQueryPresentation && !queryPresentation) {
+    app.querySelector('[data-category-table]').insertAdjacentHTML('afterbegin',
+      '<p class="notification is-warning is-light">This query presentation could not be matched here. Showing a suggested presentation.</p>')
+  }
 
   for (const [selector, calculate, kind] of [
     ['[data-category-congruences]', () => congruencePoset(table, objects), 'congruence'],

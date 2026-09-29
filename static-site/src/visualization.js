@@ -28,7 +28,7 @@ function categoryGraph(table, objects, morphisms) {
 
 export function mountCategoryVisualization(element, table, objects, morphisms) {
   if (!element || morphisms === 0 || objects === 0) {
-    return { highlight: () => {}, setLabels: () => {}, cleanup: () => {} }
+    return { highlight: () => {}, setLabels: () => {}, setObjectLabels: () => {}, cleanup: () => {} }
   }
 
   const { nodes, links } = categoryGraph(table, objects, morphisms)
@@ -110,6 +110,7 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
 
   node.append('circle').attr('r', 17)
   node.append('text').attr('dy', '0.35em').text(node => node.id)
+  node.append('title').text(node => `Object ${node.id}`)
 
   function seedPositions() {
     const radius = Math.min(width * 0.3, 100)
@@ -253,6 +254,13 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
     highlight(currentSelection)
   }
 
+  function setObjectLabels(objectLabels) {
+    node.select('text').text(item => objectLabels[item.id])
+    node.select('title').text(item => `Object ${objectLabels[item.id]}`)
+    node.attr('aria-label', item =>
+      `Object ${objectLabels[item.id]}, identity id_${objectLabels[item.id]}; drag to rearrange`)
+  }
+
   const observer = new ResizeObserver(entries => {
     const nextWidth = Math.max(320, entries[0].contentRect.width)
     if (Math.abs(nextWidth - width) < 1) return
@@ -265,6 +273,7 @@ export function mountCategoryVisualization(element, table, objects, morphisms) {
   return {
     highlight,
     setLabels,
+    setObjectLabels,
     cleanup: () => {
       observer.disconnect()
       reset?.removeEventListener('click', resetLayout)

@@ -78,30 +78,48 @@ function matrixHtml(table, labels) {
   </tbody></table></div>`
 }
 
-export function mountCategoryPresentation(element, table, objects, onLabelsChange = () => {}) {
+function originalPresentationHtml(initial) {
+  if (!initial) return ''
+  const text = value => value.trim() ? escapeHtml(value.trim()) : '(none)'
+  return `<details class="presentation-details presentation-original" open><summary>Original query presentation</summary>
+    <p class="help">These are the objects, generators, and relations entered in Query.</p>
+    <p>Objects</p><pre>${text(initial.raw.objects)}</pre>
+    <p>Generators</p><pre>${text(initial.raw.generators)}</pre>
+    <p>Relations</p><pre>${text(initial.raw.relations)}</pre>
+    ${initial.redundantGenerators ? '<p class="help">Some entered generators denote an identity or the same morphism. The table uses one name per morphism.</p>' : ''}
+  </details>`
+}
+
+export function mountCategoryPresentation(element, table, objects, onLabelsChange = () => {}, initial = null) {
   const n = table.length
+  const objectNames = initial?.objectNames || Array.from({ length: objects }, (_, object) => String(object))
   if (n === 0) {
-    element.innerHTML = '<p>The empty category has no morphisms or multiplication table.</p>'
+    element.innerHTML = `${originalPresentationHtml(initial)}<p>The empty category has no morphisms or multiplication table.</p>`
+    onLabelsChange([], objectNames)
     return
   }
 
   const suggested = suggestedGenerators(table, objects)
   const suggestedNames = new Map(suggested.map((morphism, index) => [morphism, defaultName(index)]))
+  const initialGenerators = initial ? initial.generators.map(generator => generator.morphism) : suggested
+  const initialNames = initial
+    ? new Map(initial.generators.map(generator => [generator.morphism, generator.name]))
+    : suggestedNames
   const nonidentities = Array.from({ length: n - objects }, (_, index) => objects + index)
   const endpoints = table.map((_, morphism) => ({
     source: Array.from({ length: objects }, (_, object) => object).find(object => table[morphism][object] === morphism),
     target: Array.from({ length: objects }, (_, object) => object).find(object => table[object][morphism] === morphism),
   }))
   const rawLabels = Array.from({ length: n }, (_, morphism) => String(morphism))
-  element.innerHTML = `<p class="help">${nonidentities.length ? 'Words are read left to right: <code>a b</code> means first a, then b. ' : 'Every morphism is an identity. '}The table entry is row ∘ column.</p>
+  element.innerHTML = `${originalPresentationHtml(initial)}<p class="help">${nonidentities.length ? 'Words are read left to right: <code>a b</code> means first a, then b. ' : 'Every morphism is an identity. '}The table entry is row ∘ column.</p>
     <p class="presentation-generators" data-generator-summary></p>
     ${nonidentities.length ? `<details class="presentation-details"><summary>Edit generators and names</summary>
       <form data-generator-form>
         <p class="help">Choose morphisms that generate the category. Names must be distinct letters or identifiers.</p>
         <div class="table-wrap"><table class="table is-fullwidth"><thead><tr><th>Morphism</th><th>Generator</th><th>Name</th></tr></thead><tbody>
-          ${nonidentities.map(morphism => `<tr><th>${morphism}${objects > 1 ? `<span class="help">${endpoints[morphism].source} → ${endpoints[morphism].target}</span>` : ''}</th><td><input type="checkbox" data-generator-check="${morphism}" aria-label="Use morphism ${morphism} as a generator"${suggestedNames.has(morphism) ? ' checked' : ''}></td><td><input class="input is-small presentation-name" type="text" data-generator-name="${morphism}" aria-label="Name for morphism ${morphism}" spellcheck="false" value="${suggestedNames.get(morphism) || ''}"${suggestedNames.has(morphism) ? '' : ' disabled'}></td></tr>`).join('')}
+          ${nonidentities.map(morphism => `<tr><th>${morphism}${objects > 1 ? `<span class="help">${escapeHtml(objectNames[endpoints[morphism].source])} → ${escapeHtml(objectNames[endpoints[morphism].target])}</span>` : ''}</th><td><input type="checkbox" data-generator-check="${morphism}" aria-label="Use morphism ${morphism} as a generator"${initialNames.has(morphism) ? ' checked' : ''}></td><td><input class="input is-small presentation-name" type="text" data-generator-name="${morphism}" aria-label="Name for morphism ${morphism}" spellcheck="false" value="${escapeHtml(initialNames.get(morphism) || '')}"${initialNames.has(morphism) ? '' : ' disabled'}></td></tr>`).join('')}
         </tbody></table></div>
-        <div class="presentation-actions"><button class="button is-small is-primary" type="submit">Apply</button><button class="button is-small is-light" type="button" data-reset-generators>Reset suggestion</button></div>
+        <div class="presentation-actions"><button class="button is-small is-primary" type="submit">Apply</button>${initial ? '<button class="button is-small is-light" type="button" data-restore-query>Restore query</button>' : ''}<button class="button is-small is-light" type="button" data-reset-generators>Reset suggestion</button></div>
         <p class="help" data-generator-message role="status" aria-live="polite"></p>
       </form>
     </details>` : ''}
@@ -113,25 +131,27 @@ export function mountCategoryPresentation(element, table, objects, onLabelsChang
 
   const form = element.querySelector('[data-generator-form]')
   const message = element.querySelector('[data-generator-message]')
+  let currentGenerators = [...initialGenerators]
   function render(generators, names) {
+    currentGenerators = [...generators]
     const words = generatorWords(table, objects, generators)
     const textLabels = words.map((word, morphism) => morphism < objects
-      ? `id_${morphism}` : word.map(generator => names.get(generator)).join(' '))
+      ? `id_${objectNames[morphism]}` : word.map(generator => names.get(generator)).join(' '))
     const htmlLabels = words.map((_, morphism) => morphism < objects
-      ? `id<sub>${morphism}</sub>` : escapeHtml(textLabels[morphism]))
+      ? `id<sub>${escapeHtml(objectNames[morphism])}</sub>` : escapeHtml(textLabels[morphism]))
     element.querySelector('[data-generator-summary]').innerHTML = generators.length
-      ? `Generators: ${generators.map(morphism => `<code>${escapeHtml(names.get(morphism))}</code> = ${morphism}${objects > 1 ? ` (${endpoints[morphism].source} → ${endpoints[morphism].target})` : ''}`).join(', ')}.`
+      ? `Generators: ${generators.map(morphism => `<code>${escapeHtml(names.get(morphism))}</code> = ${morphism}${objects > 1 ? ` (${escapeHtml(objectNames[endpoints[morphism].source])} → ${escapeHtml(objectNames[endpoints[morphism].target])})` : ''}`).join(', ')}.`
       : 'No nonidentity generators are needed.'
     element.querySelector('[data-morphism-key]').innerHTML = words.map((_, morphism) =>
       `<span class="morphism-key-item">${morphism} = <code>${htmlLabels[morphism]}</code></span>`).join('')
     element.querySelector('[data-readable-table]').innerHTML = matrixHtml(table, htmlLabels)
     const relations = presentationRelations(table, generators, words)
-    element.querySelector('[data-relation-count]').textContent = `Relations (${relations.length})`
+    element.querySelector('[data-relation-count]').textContent = `${initial ? 'Derived relations' : 'Relations'} (${relations.length})`
     element.querySelector('[data-relation-list]').innerHTML = relations.length
       ? `<ul class="presentation-relations">${relations.map(({ left, right, product }) =>
-        `<li><code>${escapeHtml(left.map(generator => names.get(generator)).join(' '))}</code> = <code>${right.length ? escapeHtml(right.map(generator => names.get(generator)).join(' ')) : `id<sub>${product}</sub>`}</code></li>`).join('')}</ul>`
+        `<li><code>${escapeHtml(left.map(generator => names.get(generator)).join(' '))}</code> = <code>${right.length ? escapeHtml(right.map(generator => names.get(generator)).join(' ')) : `id<sub>${escapeHtml(objectNames[product])}</sub>`}</code></li>`).join('')}</ul>`
       : '<p class="help">No nontrivial relations are needed.</p>'
-    onLabelsChange(textLabels)
+    onLabelsChange(textLabels, objectNames)
   }
 
   function fillForm(generators, names) {
@@ -159,8 +179,10 @@ export function mountCategoryPresentation(element, table, objects, onLabelsChang
   })
   form?.addEventListener('submit', event => {
     event.preventDefault()
-    const generators = nonidentities.filter(morphism =>
+    const checked = nonidentities.filter(morphism =>
       form.querySelector(`[data-generator-check="${morphism}"]`).checked)
+    const generators = [...currentGenerators.filter(morphism => checked.includes(morphism)),
+      ...checked.filter(morphism => !currentGenerators.includes(morphism))]
     const names = new Map(generators.map(morphism =>
       [morphism, form.querySelector(`[data-generator-name="${morphism}"]`).value.trim()]))
     const values = [...names.values()]
@@ -186,5 +208,10 @@ export function mountCategoryPresentation(element, table, objects, onLabelsChang
     render(suggested, suggestedNames)
     message.textContent = 'Suggested generators restored.'
   })
-  render(suggested, suggestedNames)
+  form?.querySelector('[data-restore-query]')?.addEventListener('click', () => {
+    fillForm(initialGenerators, initialNames)
+    render(initialGenerators, initialNames)
+    message.textContent = 'Query generators restored.'
+  })
+  render(initialGenerators, initialNames)
 }

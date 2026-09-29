@@ -11,6 +11,7 @@ import {
   lookupCandidates,
 } from '../data.js'
 import { completePresentation, isomorphicTables, parsePresentation, tableSignature } from '../presentation.js'
+import { presentationQueryKeys } from '../category-query-presentation.js'
 import { escapeHtml, iconText, numberFormat, setTitle } from '../ui.js'
 import queryTemplate from './query.html'
 
@@ -141,7 +142,13 @@ export async function renderQueryPage({ app, isCurrent, onError }) {
         if (!isomorphicTables(category.table, stored.table, category.objects)) continue
         const metadata = await getCategoryMetadata(cell, index)
         if (!isLatest()) return
-        results.innerHTML = `<div class="box"><p>Found <a href="${categoryHref(cell.morphisms, cell.objects, index)}" data-link>${categoryLabel(cell.morphisms, cell.objects, index)}</a>${metadata?.friendlyName ? ` — ${escapeHtml(metadata.friendlyName)}` : ''}.</p></div>`
+        const presentationQuery = new URLSearchParams({
+          [presentationQueryKeys.objects]: String(form.get('objects') || ''),
+          [presentationQueryKeys.generators]: String(form.get('generators') || ''),
+          [presentationQueryKeys.relations]: String(form.get('relations') || ''),
+        })
+        const href = `${categoryHref(cell.morphisms, cell.objects, index)}?${presentationQuery}`
+        results.innerHTML = `<div class="box"><p>Found <a href="${escapeHtml(href)}" data-link>${categoryLabel(cell.morphisms, cell.objects, index)}</a>${metadata?.friendlyName ? ` — ${escapeHtml(metadata.friendlyName)}` : ''}.</p></div>`
         return
       }
       if (isLatest()) results.innerHTML = `<div class="box">The presentation has ${category.morphisms} morphisms and ${category.objects} objects, but no matching category was found in this build.</div>`
